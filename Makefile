@@ -1,5 +1,5 @@
 
-flags := -O2 - Wall
+flags := -O2 - Wall -I
 
 all: tcpserver
 
