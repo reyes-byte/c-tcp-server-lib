@@ -22,18 +22,21 @@ typedef void (*callback)(connection*);
 #define $4 (int32)
 #define $8 (int64)
 
-#define reterr(x) do {  \
+#define reterr(x) do { \
     server *_srv; \
-    int16 _sz; \
+    int16 _sz, _len;\
     \
     _sz = sizeof(struct s_server) \
-        + $2 strlen($c (x)) \
+        + $2 (_len = strlen($c (x))) \
         + 1; \
     _srv = (server *)malloc($i _sz); \
     assert(_srv); \
-    memset($c _srv, 0, $i _sz); \ //char* casted
-    _srv.
-}
+    memset($c _srv, 0, $i _sz); \ 
+    _srv.status = Errstatus; \
+    memcpy($c _srv.errmsg, $c(x), ); \
+    \
+    return _srv;\
+} while(false)
 
 enum {
     errstatus,
@@ -59,4 +62,4 @@ typedef struct s_server server;
 int main(void);
 public server *tcpserver(int16,callback);
 
-private temp(connection*)
+private temp(connection*);
