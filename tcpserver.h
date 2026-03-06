@@ -1,6 +1,10 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <errno.h>
 
 typedef unsigned char int8;
 typedef unsigned short int16;
@@ -13,7 +17,7 @@ typedef void (*callback)(connection*);
 //public private keywords
 #define public __attribute__((visibility("default")))
 #define private __attribute__((visibility("hidden"))) static
-
+#define init    __attribute__((ctors)) 
 
 #define $c (char *)
 #define $i (int)
@@ -48,6 +52,7 @@ struct s_connection {
     int32 fd;
     int8 host[16];
     int16 port; 
+    int (*recv)()
 }; 
 
 typedef struct s_connection connection;
@@ -55,11 +60,18 @@ typedef struct s_connection connection;
 struct s_server {
     int32 fd; //socket fd
     int8 status:1; //allocate 1 bit
+    int16 port;
+    bool (*ok)(void);
+    char (*err)(void);
+    int (*listen)(void)
+    callback cb;
     int8 errmsg[];
 }; 
 typedef struct s_server server;
 
 int main(void);
+private init start(void);
 public server *tcpserver(int16,callback);
-
-private temp(connection*);
+private bool okfunction(void);
+private char *errfunction(void);
+private int listenfunction(void);

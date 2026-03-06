@@ -55,6 +55,8 @@ public server *tcpserver(int16 port, callback cb) {
     srv->port = port;
     srv->ok = &okfunction;
     srv->err = &errfunction;
+    srv->cb = cb;
+    srv->listen = &listen;
     srv->status = Okstatus;
     globalsrv = srv;
 }
@@ -84,6 +86,8 @@ private int listenfuncion() {
     struct sockaddr_in sock;
     socklen_t len;
     socklen_t *lenptr;
+    int16 size;
+    connection *conn;
 
     if (!globalsrv) 
         return -1;
@@ -97,8 +101,38 @@ private int listenfuncion() {
     lenptr = &len;
 
     while (true) {
-        ret = accept(globalsrv -> fd, (struct sockaddr *)&sock, lenptr );
+        ret = accept($i globalsrv -> fd, (struct sockaddr *)&sock, lenptr);
+        if (ret < 0) {
+            sleep(2);
+            continue;
+        }    
+        else 
+            s = $4 ret;
+
+        size = sizeof(struct s_connection);
+        conn = (connection *)malloc($i size);
+        if (!conn) {
+            close($i s);
+            sleep(2);
+            continue;
+    
+        }
+        memset($c conn, 0,$i size)
+        conn -> fd = s;
+        conn->host = $i inet_ntoa(sock.sin_addr);
+        conn->port = $2 htons(sock.sin_port);
+        if (!fork()) {
+            if (conn)
+                free(conn);
+            continue;
+        }
+
+        conn -> cb(conn);
+        exit(0);
     }
+
+    exit(0);
+    return 0;
 
 }
 
