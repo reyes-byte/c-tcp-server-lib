@@ -1,24 +1,36 @@
 /*tcpserver.c*/
-#include <tcpserver.h>
+#include "tcpserver.h"
 
 public server *globalsrv;
+public connection *globalconn;
 
-#define handler() &handler__
+#define handler() &handler_
 
 private void handler_(connection *conn) {
+    char buf[128];
+
+    memset(buf, 0, 128);
+    conn -> send("Welcome to Server\n", 19);
+    conn ->recv(buf, 127);
+    printf("Received: '%s'\n", buf);
+
     return;
 }
 
-private init start() {
+private init void start() {
+    globalsrv = (server *)0;
+    globalconn = (connection *)0;
+
+    
     return; 
 }
 
 public server *tcpserver(int16 port, callback cb) {
     signed int ret;
-    int32 s, ;
+    int32 s;
     struct sockaddr_in sock;
     server *srv;
-    int 16 size;
+    int16 size;
     
     if (globalsrv)
         reterr($1 "tcp server already initialised");
@@ -31,19 +43,19 @@ public server *tcpserver(int16 port, callback cb) {
 
 
     sock.sin_family = AF_INET;
-    sock.sin_port = htops($i port);
-    sock_sin_addr.s_addr = INADDR_ANY;
+    sock.sin_port = htons($i port); //translates into big endian
+    sock.sin_addr.s_addr = INADDR_ANY;
 
     ret = bind($i s, (struct sockaddr*)&sock, sizeof(struct sockaddr));
-    if (ret ) {
+    if (ret) {
         close ($i s);
         reterr($1 "Unable to bind to port");
     }
 
     ret = listen($i s, 10);
     if (ret) {
-        close($i s)
-        reterr($1 "Unable to lisen to port")
+        close($i s);
+        reterr($1 "Unable to lisen to port");
     }
 
     size = sizeof(struct s_server);
@@ -56,13 +68,15 @@ public server *tcpserver(int16 port, callback cb) {
     srv->ok = &okfunction;
     srv->err = &errfunction;
     srv->cb = cb;
-    srv->listen = &listen;
+    srv->listen = &listenfunction;
     srv->status = Okstatus;
     globalsrv = srv;
+
+    return srv;
 }
 
 private bool okfunction() {
-    if (!globsrv)
+    if (!globalsrv)
         return false;
     return (globalsrv->status == Okstatus) ?
             true :
@@ -70,16 +84,17 @@ private bool okfunction() {
 }
 
 private char * errfunction() {
-    if (!globserv) {
+    if (!globalsrv) {
         return "tcp server not initialized";
+    }
     else if (globalsrv->status != errstatus)
         return "no error";
-    else
+    else {
         return $c globalsrv;
     }
 }
 
-private int listenfuncion() {
+private int listenfunction() {
 
     int32 s;
     signed int ret;
@@ -94,7 +109,7 @@ private int listenfuncion() {
     else if (globalsrv->status == errstatus) 
         return -1;
 
-    if (!fork())
+    if (fork())
         exit(0);
      
     len = sizeof(struct sockaddr_in);
@@ -115,19 +130,23 @@ private int listenfuncion() {
             close($i s);
             sleep(2);
             continue;
-    
         }
-        memset($c conn, 0,$i size)
+        memset($c conn, 0,$i size);
         conn -> fd = s;
-        conn->host = $i inet_ntoa(sock.sin_addr);
-        conn->port = $2 htons(sock.sin_port);
-        if (!fork()) {
+        strncpy($c conn->host,inet_ntoa(sock.sin_addr), 15);
+        conn->port = $2 ntohs(sock.sin_port);
+        conn ->send = &sendfunction;
+        conn->recv = &recvfunction;
+        if (fork()) {
+            close(s);
             if (conn)
                 free(conn);
-            continue;
+            continue; //parent process continue to accept new connection
         }
 
-        conn -> cb(conn);
+        globalconn = conn;
+        globalsrv ->cb(conn);
+        close($i s);
         exit(0);
     }
 
@@ -135,13 +154,26 @@ private int listenfuncion() {
     return 0;
 
 }
+private int recvfunction(char *c, int sz) {
+    if (!globalconn || !c || !sz)
+        return -1;
+    else 
+        return read($i globalconn -> fd, c, sz); 
+}
+
+private int sendfunction(char *c, int sz) {
+    if (!globalconn || !c || !sz) return -1;
+    else 
+        return write($i globalconn -> fd, c, sz);
+}
+
 
 int main() {
     server *serv;
 
     serv = tcpserver(8585, handler());
     if (serv && !serv->ok()) {
-        printf("Error %s\n", serv.err());
+        printf("Error %s\n", serv->err());
         return -1;
     }
      
